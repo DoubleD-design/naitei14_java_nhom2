@@ -7,8 +7,8 @@ import lombok.Data;
 
 @Entity
 @Data
-@Table(name = "team_memberships")
-public class TeamMembership {
+@Table(name = "team_members")
+public class TeamMember {
     @Id
     private Long id;
 }
