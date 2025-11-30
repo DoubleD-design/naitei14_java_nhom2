@@ -9,13 +9,16 @@ import vn.sun.membermanagementsystem.dto.request.UpdateTeamRequest;
 import vn.sun.membermanagementsystem.dto.response.TeamDTO;
 import vn.sun.membermanagementsystem.dto.response.TeamDetailDTO;
 import vn.sun.membermanagementsystem.dto.response.TeamDTO;
+import vn.sun.membermanagementsystem.dto.response.UserSelectionDTO;
 import vn.sun.membermanagementsystem.entities.Team;
 import vn.sun.membermanagementsystem.exception.BadRequestException;
+import vn.sun.membermanagementsystem.entities.User;
 import vn.sun.membermanagementsystem.exception.ResourceNotFoundException;
 import vn.sun.membermanagementsystem.mapper.TeamMapper;
 import vn.sun.membermanagementsystem.exception.DuplicateResourceException;
 import vn.sun.membermanagementsystem.exception.ResourceNotFoundException;
 import vn.sun.membermanagementsystem.mapper.TeamMapper;
+import vn.sun.membermanagementsystem.repositories.TeamMemberRepository;
 import vn.sun.membermanagementsystem.repositories.TeamRepository;
 import vn.sun.membermanagementsystem.services.TeamLeadershipService;
 import vn.sun.membermanagementsystem.services.TeamService;
@@ -24,6 +27,7 @@ import java.util.Collections;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -33,6 +37,8 @@ public class TeamServiceImpl implements TeamService {
     private final TeamRepository teamRepository;
     private final TeamMapper teamMapper;
     private final TeamLeadershipService teamLeadershipService;
+    private final TeamMemberRepository teamMemberRepository;
+
 
     @Override
     public Optional<TeamDTO> getTeamById(Long id) {
@@ -45,6 +51,17 @@ public class TeamServiceImpl implements TeamService {
         return teamRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Team not found"));
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserSelectionDTO> getActiveUsersByTeam(Long teamId) {
+        log.debug("Loading active users for teamId={}", teamId);
+        List<User> users = teamMemberRepository.findActiveUsersByTeamId(teamId);
+        return users.stream()
+                .map(u -> new UserSelectionDTO(u.getId(), u.getName(), u.getEmail()))
+                .collect(Collectors.toList());
+    }
+
 
     @Transactional
     public TeamDTO createTeam(CreateTeamRequest request) {
