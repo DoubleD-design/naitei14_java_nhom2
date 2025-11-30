@@ -2,13 +2,16 @@ package vn.sun.membermanagementsystem.services.impls;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.sun.membermanagementsystem.dto.request.CreateTeamRequest;
 import vn.sun.membermanagementsystem.dto.request.UpdateTeamRequest;
 import vn.sun.membermanagementsystem.dto.response.TeamDTO;
 import vn.sun.membermanagementsystem.dto.response.TeamDetailDTO;
-import vn.sun.membermanagementsystem.dto.response.TeamDTO;
+import vn.sun.membermanagementsystem.dto.response.TeamLeaderDTO;
+import vn.sun.membermanagementsystem.dto.response.TeamStatisticsDTO;
 import vn.sun.membermanagementsystem.dto.response.UserSelectionDTO;
 import vn.sun.membermanagementsystem.entities.Team;
 import vn.sun.membermanagementsystem.exception.BadRequestException;
@@ -16,14 +19,11 @@ import vn.sun.membermanagementsystem.entities.User;
 import vn.sun.membermanagementsystem.exception.ResourceNotFoundException;
 import vn.sun.membermanagementsystem.mapper.TeamMapper;
 import vn.sun.membermanagementsystem.exception.DuplicateResourceException;
-import vn.sun.membermanagementsystem.exception.ResourceNotFoundException;
-import vn.sun.membermanagementsystem.mapper.TeamMapper;
 import vn.sun.membermanagementsystem.repositories.TeamMemberRepository;
 import vn.sun.membermanagementsystem.repositories.TeamRepository;
 import vn.sun.membermanagementsystem.services.TeamLeadershipService;
 import vn.sun.membermanagementsystem.services.TeamService;
 
-import java.util.Collections;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -38,7 +38,6 @@ public class TeamServiceImpl implements TeamService {
     private final TeamMapper teamMapper;
     private final TeamLeadershipService teamLeadershipService;
     private final TeamMemberRepository teamMemberRepository;
-
 
     @Override
     public Optional<TeamDTO> getTeamById(Long id) {
@@ -61,7 +60,6 @@ public class TeamServiceImpl implements TeamService {
                 .map(u -> new UserSelectionDTO(u.getId(), u.getName(), u.getEmail()))
                 .collect(Collectors.toList());
     }
-
 
     @Transactional
     public TeamDTO createTeam(CreateTeamRequest request) {
@@ -133,6 +131,30 @@ public class TeamServiceImpl implements TeamService {
                     return new ResourceNotFoundException("Team not found with ID: " + id);
                 });
 
+        // Check if team has active members
+        long activeMembersCount = teamRepository.countActiveMembers(id);
+        if (activeMembersCount > 0) {
+            log.error("Cannot delete team with ID {} - has {} active members", id, activeMembersCount);
+            throw new BadRequestException("Cannot delete team with active members. Team has "
+                    + activeMembersCount + " active member(s).");
+        }
+
+        // Check if team has active projects
+        boolean hasActiveProjects = teamRepository.hasActiveProjects(id);
+        if (hasActiveProjects) {
+            log.error("Cannot delete team with ID {} - has active projects", id);
+            throw new BadRequestException("Cannot delete team with active projects.");
+        }
+
+        // Remove current leader if exists
+        try {
+            teamLeadershipService.removeLeader(id);
+            log.info("Removed leader from team ID: {}", id);
+        } catch (BadRequestException e) {
+            log.debug("No active leader to remove for team ID: {}", id);
+        }
+
+        // Perform soft delete
         team.setDeletedAt(LocalDateTime.now());
         teamRepository.save(team);
 
@@ -164,6 +186,88 @@ public class TeamServiceImpl implements TeamService {
 
         List<Team> teams = teamRepository.findAllNotDeleted();
         return teamMapper.toDTOList(teams);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<TeamDTO> getAllTeamsWithPagination(Pageable pageable) {
+        log.info("Getting all teams with pagination: page {}, size {}",
+                pageable.getPageNumber(), pageable.getPageSize());
+
+        Page<Team> teamPage = teamRepository.findAllNotDeleted(pageable);
+
+        return teamPage.map(team -> {
+            TeamDTO dto = teamMapper.toDTO(team);
+
+            // Populate current leader from leadership history
+            team.getLeadershipHistory().stream()
+                    .filter(lh -> lh.getEndedAt() == null)
+                    .findFirst()
+                    .ifPresent(lh -> {
+                        TeamLeaderDTO leaderDTO = new TeamLeaderDTO();
+                        leaderDTO.setUserId(lh.getLeader().getId());
+                        leaderDTO.setName(lh.getLeader().getName());
+                        leaderDTO.setStartedAt(lh.getStartedAt());
+                        dto.setCurrentLeader(leaderDTO);
+                    });
+
+            // Populate member count using repository query
+            long memberCount = teamRepository.countActiveMembers(team.getId());
+            dto.setMemberCount((int) memberCount);
+
+            return dto;
+        });
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TeamStatisticsDTO getTeamStatistics(Long teamId) {
+        log.info("Getting statistics for team ID: {}", teamId);
+
+        Team team = teamRepository.findByIdAndNotDeleted(teamId)
+                .orElseThrow(() -> {
+                    log.error("Team not found with ID: {}", teamId);
+                    return new ResourceNotFoundException("Team not found with ID: " + teamId);
+                });
+
+        TeamStatisticsDTO stats = new TeamStatisticsDTO();
+        stats.setTeamId(team.getId());
+        stats.setTeamName(team.getName());
+
+        // Get all member statistics
+        long activeMembersCount = teamRepository.countActiveMembers(teamId);
+        stats.setActiveMembers((int) activeMembersCount);
+
+        // Calculate total and inactive members from team memberships
+        long totalMembersCount = team.getTeamMemberships().stream()
+                .filter(tm -> tm.getLeftAt() == null)
+                .count();
+        stats.setTotalMembers((int) totalMembersCount);
+        stats.setInactiveMembers((int) (totalMembersCount - activeMembersCount));
+
+        // Get all project statistics
+        long totalProjectsCount = teamRepository.countAllProjects(teamId);
+        long activeProjectsCount = teamRepository.countActiveProjects(teamId);
+        long completedProjectsCount = teamRepository.countCompletedProjects(teamId);
+
+        stats.setTotalProjects((int) totalProjectsCount);
+        stats.setActiveProjects((int) activeProjectsCount);
+        stats.setCompletedProjects((int) completedProjectsCount);
+
+        // Get current leader
+        team.getLeadershipHistory().stream()
+                .filter(lh -> lh.getEndedAt() == null)
+                .findFirst()
+                .ifPresent(lh -> {
+                    TeamLeaderDTO leaderDTO = new TeamLeaderDTO();
+                    leaderDTO.setUserId(lh.getLeader().getId());
+                    leaderDTO.setName(lh.getLeader().getName());
+                    leaderDTO.setStartedAt(lh.getStartedAt());
+                    stats.setCurrentLeader(leaderDTO);
+                });
+
+        log.info("Team statistics retrieved successfully for ID: {}", teamId);
+        return stats;
     }
 
     private void handleLeaderChange(Long teamId, Long newLeaderId) {

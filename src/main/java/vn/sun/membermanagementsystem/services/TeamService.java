@@ -1,10 +1,12 @@
 package vn.sun.membermanagementsystem.services;
 
-import vn.sun.membermanagementsystem.dto.response.TeamDTO; // Import DTO
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import vn.sun.membermanagementsystem.dto.response.TeamDTO;
 import vn.sun.membermanagementsystem.dto.request.CreateTeamRequest;
 import vn.sun.membermanagementsystem.dto.request.UpdateTeamRequest;
-import vn.sun.membermanagementsystem.dto.response.TeamDTO;
 import vn.sun.membermanagementsystem.dto.response.TeamDetailDTO;
+import vn.sun.membermanagementsystem.dto.response.TeamStatisticsDTO;
 import vn.sun.membermanagementsystem.dto.response.UserSelectionDTO;
 import vn.sun.membermanagementsystem.entities.Team;
 
@@ -26,6 +28,10 @@ public interface TeamService {
     TeamDetailDTO getTeamDetail(Long id);
 
     List<TeamDTO> getAllTeams();
+
+    Page<TeamDTO> getAllTeamsWithPagination(Pageable pageable);
+
+    TeamStatisticsDTO getTeamStatistics(Long teamId);
 
     List<UserSelectionDTO> getActiveUsersByTeam(Long teamId);
 }
