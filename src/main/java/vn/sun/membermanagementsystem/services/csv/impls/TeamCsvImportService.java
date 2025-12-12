@@ -5,7 +5,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import vn.sun.membermanagementsystem.dto.request.CreateTeamRequest;
 import vn.sun.membermanagementsystem.dto.request.csv.CsvImportResult;
+import vn.sun.membermanagementsystem.dto.response.TeamDTO;
 import vn.sun.membermanagementsystem.entities.Team;
 import vn.sun.membermanagementsystem.entities.User;
 import vn.sun.membermanagementsystem.repositories.TeamRepository;
@@ -76,40 +78,32 @@ public class TeamCsvImportService extends AbstractCsvImportService<Team> {
         String description = getStringValue(data, COL_DESCRIPTION);
         String leaderEmail = getStringValue(data, COL_LEADER_EMAIL);
 
-        // Create new Team entity
-        Team team = new Team();
-        team.setName(name.trim());
-        team.setDescription(isNotBlank(description) ? description.trim() : null);
-        team.setCreatedAt(LocalDateTime.now());
-        team.setUpdatedAt(LocalDateTime.now());
-
-        // Save to database
-        Team savedTeam = teamRepository.save(team);
-        log.info("Row {}: Created team '{}' with ID: {}",
-                rowNumber, savedTeam.getName(), savedTeam.getId());
-
-        // Assign leader if email provided
+        // Find leader if email provided
+        Long leaderId = null;
         if (isNotBlank(leaderEmail)) {
             try {
                 User leader = userRepository.findByEmailAndNotDeleted(leaderEmail)
                         .orElseThrow(() -> new RuntimeException("Leader not found: " + leaderEmail));
-
-                // Add leader as member first
-                teamService.addMemberToTeam(savedTeam.getId(), leader.getId());
-                log.info("Row {}: Added leader as member to team '{}'", rowNumber, savedTeam.getName());
-
-                // Assign as leader
-                teamLeadershipService.assignLeader(savedTeam.getId(), leader.getId());
-                log.info("Row {}: Assigned leader '{}' to team '{}'",
-                        rowNumber, leader.getEmail(), savedTeam.getName());
-
+                leaderId = leader.getId();
             } catch (Exception e) {
-                log.warn("Row {}: Failed to assign leader '{}' to team '{}': {}",
-                        rowNumber, leaderEmail, savedTeam.getName(), e.getMessage());
-                result.addError(rowNumber, "Leader Assignment",
-                        "Failed to assign leader: " + e.getMessage());
+                log.warn("Row {}: Leader not found '{}': {}",
+                        rowNumber, leaderEmail, e.getMessage());
             }
         }
+
+        // Create team using service (this will log CREATE_TEAM)
+        CreateTeamRequest request = new CreateTeamRequest();
+        request.setName(name.trim());
+        request.setDescription(isNotBlank(description) ? description.trim() : null);
+        request.setLeaderId(leaderId);
+
+        TeamDTO teamDTO = teamService.createTeam(request);
+        log.info("Row {}: Created team '{}' with ID: {}",
+                rowNumber, teamDTO.getName(), teamDTO.getId());
+
+        // Return the Team entity (need to fetch from repository)
+        Team savedTeam = teamRepository.findById(teamDTO.getId())
+                .orElseThrow(() -> new RuntimeException("Team not found after creation"));
 
         return savedTeam;
     }

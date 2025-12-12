@@ -390,10 +390,10 @@ public class AdminTeamController {
         if (result.getRows() != null) {
             log.info("Rows count: {}", result.getRows().size());
             result.getRows().forEach(row -> {
-                log.info("Row {}: valid={}, data={}, errors={}", 
-                    row.getRowNumber(), row.isValid(), 
-                    row.getData() != null ? String.join("|", row.getData()) : "null",
-                    row.getErrors());
+                log.info("Row {}: valid={}, data={}, errors={}",
+                        row.getRowNumber(), row.isValid(),
+                        row.getData() != null ? String.join("|", row.getData()) : "null",
+                        row.getErrors());
             });
         }
         return ResponseEntity.ok()

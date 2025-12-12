@@ -6,7 +6,10 @@
 >
   <head>
     <title layout:title-pattern="Import Teams - %s">Import Teams</title>
-    <link th:href="@{/css/import.css(v=${#dates.createNow().time})}" rel="stylesheet" />
+    <link
+      th:href="@{/css/import.css(v=${#dates.createNow().time})}"
+      rel="stylesheet"
+    />
   </head>
   <body>
     <section layout:fragment="content">
@@ -276,7 +279,9 @@
             );
 
             if (!response.ok) {
-              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+              throw new Error(
+                `HTTP ${response.status}: ${response.statusText}`
+              );
             }
 
             const result = await response.json();
@@ -286,7 +291,8 @@
             previewSection.classList.remove("hidden");
             const previewError = document.getElementById("previewError");
             if (previewError) {
-              previewError.textContent = "Error previewing file: " + error.message;
+              previewError.textContent =
+                "Error previewing file: " + error.message;
               previewError.classList.remove("hidden");
             }
           } finally {
@@ -296,7 +302,7 @@
 
         function displayPreview(result) {
           previewSection.classList.remove("hidden");
-          
+
           const previewError = document.getElementById("previewError");
           const summaryBox = document.getElementById("summaryBox");
           const previewHeaders = document.getElementById("previewHeaders");
@@ -317,9 +323,12 @@
 
           if (summaryBox) summaryBox.style.display = "flex";
 
-          document.getElementById("totalCount").textContent = result.totalRows || 0;
-          document.getElementById("validCount").textContent = result.validRows || 0;
-          document.getElementById("invalidCount").textContent = result.invalidRows || 0;
+          document.getElementById("totalCount").textContent =
+            result.totalRows || 0;
+          document.getElementById("validCount").textContent =
+            result.validRows || 0;
+          document.getElementById("invalidCount").textContent =
+            result.invalidRows || 0;
 
           if (result.headers && result.headers.length > 0 && previewHeaders) {
             previewHeaders.innerHTML =
@@ -339,16 +348,22 @@
               }
 
               if (row.valid) {
-                html += '<td><span class="badge badge-success">Valid</span></td>';
+                html +=
+                  '<td><span class="badge badge-success">Valid</span></td>';
               } else {
-                html += `<td><span class="badge badge-danger">Invalid</span><ul class="error-list">${(row.errors || []).map((e) => `<li>${e}</li>`).join("")}</ul></td>`;
+                html += `<td><span class="badge badge-danger">Invalid</span><ul class="error-list">${(
+                  row.errors || []
+                )
+                  .map((e) => `<li>${e}</li>`)
+                  .join("")}</ul></td>`;
               }
 
               tr.innerHTML = html;
               previewBody.appendChild(tr);
             });
           } else {
-            previewBody.innerHTML = '<tr><td colspan="100" style="text-align: center;">No data rows found</td></tr>';
+            previewBody.innerHTML =
+              '<tr><td colspan="100" style="text-align: center;">No data rows found</td></tr>';
           }
         }
       </script>
