@@ -376,9 +376,9 @@ public class AdminTeamController {
         return "admin/teams/import";
     }
 
-    @PostMapping("/import/preview")
+    @PostMapping(value = "/import/preview", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public CsvPreviewResult previewImport(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<CsvPreviewResult> previewImport(@RequestParam("file") MultipartFile file) {
         log.info("Previewing CSV import for teams, file: {}", file.getOriginalFilename());
         CsvPreviewResult result = teamCsvImportService.previewCsv(file);
         log.info("Preview result - totalRows: {}, validRows: {}, invalidRows: {}, hasErrors: {}, fileError: {}",
@@ -389,8 +389,16 @@ public class AdminTeamController {
         }
         if (result.getRows() != null) {
             log.info("Rows count: {}", result.getRows().size());
+            result.getRows().forEach(row -> {
+                log.info("Row {}: valid={}, data={}, errors={}", 
+                    row.getRowNumber(), row.isValid(), 
+                    row.getData() != null ? String.join("|", row.getData()) : "null",
+                    row.getErrors());
+            });
         }
-        return result;
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(result);
     }
 
     @PostMapping("/import")

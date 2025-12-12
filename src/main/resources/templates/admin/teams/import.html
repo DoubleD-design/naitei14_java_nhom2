@@ -6,7 +6,7 @@
 >
   <head>
     <title layout:title-pattern="Import Teams - %s">Import Teams</title>
-    <link th:href="@{/css/import.css}" rel="stylesheet" />
+    <link th:href="@{/css/import.css(v=${#dates.createNow().time})}" rel="stylesheet" />
   </head>
   <body>
     <section layout:fragment="content">
@@ -276,9 +276,7 @@
             );
 
             if (!response.ok) {
-              throw new Error(
-                `HTTP ${response.status}: ${response.statusText}`
-              );
+              throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
 
             const result = await response.json();
@@ -288,8 +286,7 @@
             previewSection.classList.remove("hidden");
             const previewError = document.getElementById("previewError");
             if (previewError) {
-              previewError.textContent =
-                "Error previewing file: " + error.message;
+              previewError.textContent = "Error previewing file: " + error.message;
               previewError.classList.remove("hidden");
             }
           } finally {
@@ -298,81 +295,60 @@
         });
 
         function displayPreview(result) {
+          previewSection.classList.remove("hidden");
+          
           const previewError = document.getElementById("previewError");
+          const summaryBox = document.getElementById("summaryBox");
+          const previewHeaders = document.getElementById("previewHeaders");
+          const previewBody = document.getElementById("previewBody");
+
+          if (previewError) previewError.classList.add("hidden");
+          if (previewHeaders) previewHeaders.innerHTML = "";
+          if (previewBody) previewBody.innerHTML = "";
 
           if (result.fileError) {
-            previewError.textContent = result.fileError;
-            previewError.classList.remove("hidden");
-            previewSection.classList.remove("hidden");
+            if (previewError) {
+              previewError.textContent = result.fileError;
+              previewError.classList.remove("hidden");
+            }
+            if (summaryBox) summaryBox.style.display = "none";
             return;
           }
 
-          previewError.classList.add("hidden");
-          previewSection.classList.remove("hidden");
+          if (summaryBox) summaryBox.style.display = "flex";
 
-          document.getElementById("totalCount").textContent =
-            result.totalRows || 0;
-          document.getElementById("validCount").textContent =
-            result.validRows || 0;
-          document.getElementById("invalidCount").textContent =
-            result.invalidRows || 0;
+          document.getElementById("totalCount").textContent = result.totalRows || 0;
+          document.getElementById("validCount").textContent = result.validRows || 0;
+          document.getElementById("invalidCount").textContent = result.invalidRows || 0;
 
-          const headersRow = document.getElementById("previewHeaders");
-          const tbody = document.getElementById("previewBody");
-
-          headersRow.innerHTML = "";
-          tbody.innerHTML = "";
-
-          // Row number header
-          const rowNumHeader = document.createElement("th");
-          rowNumHeader.textContent = "#";
-          headersRow.appendChild(rowNumHeader);
-
-          // Data headers
-          if (result.headers) {
-            result.headers.forEach((header) => {
-              const th = document.createElement("th");
-              th.textContent = header;
-              headersRow.appendChild(th);
-            });
+          if (result.headers && result.headers.length > 0 && previewHeaders) {
+            previewHeaders.innerHTML =
+              "<th>#</th>" +
+              result.headers.map((h) => `<th>${h}</th>`).join("") +
+              "<th>Status</th>";
           }
 
-          // Errors header
-          const errorsHeader = document.createElement("th");
-          errorsHeader.textContent = "Errors";
-          headersRow.appendChild(errorsHeader);
-
-          // Data rows
-          if (result.rows) {
+          if (result.rows && result.rows.length > 0 && previewBody) {
             result.rows.forEach((row) => {
               const tr = document.createElement("tr");
-              tr.className = row.valid ? "valid-row" : "invalid-row";
+              tr.className = row.valid ? "valid" : "invalid";
 
-              // Row number
-              const rowNumCell = document.createElement("td");
-              rowNumCell.textContent = row.rowNumber;
-              tr.appendChild(rowNumCell);
-
-              // Data cells
+              let html = `<td>${row.rowNumber}</td>`;
               if (row.data) {
-                row.data.forEach((cell) => {
-                  const td = document.createElement("td");
-                  td.textContent = cell || "";
-                  tr.appendChild(td);
-                });
+                html += row.data.map((d) => `<td>${d || ""}</td>`).join("");
               }
 
-              // Errors cell
-              const errorsCell = document.createElement("td");
-              if (row.errors && row.errors.length > 0) {
-                errorsCell.innerHTML = row.errors
-                  .map((err) => `<span class="error-msg">${err}</span>`)
-                  .join("<br>");
+              if (row.valid) {
+                html += '<td><span class="badge badge-success">Valid</span></td>';
+              } else {
+                html += `<td><span class="badge badge-danger">Invalid</span><ul class="error-list">${(row.errors || []).map((e) => `<li>${e}</li>`).join("")}</ul></td>`;
               }
-              tr.appendChild(errorsCell);
 
-              tbody.appendChild(tr);
+              tr.innerHTML = html;
+              previewBody.appendChild(tr);
             });
+          } else {
+            previewBody.innerHTML = '<tr><td colspan="100" style="text-align: center;">No data rows found</td></tr>';
           }
         }
       </script>

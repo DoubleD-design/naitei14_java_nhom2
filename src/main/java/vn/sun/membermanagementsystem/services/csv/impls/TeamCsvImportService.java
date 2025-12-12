@@ -138,10 +138,10 @@ public class TeamCsvImportService extends AbstractCsvImportService<Team> {
     public String generateSampleCsv() {
         StringBuilder sb = new StringBuilder();
         sb.append(String.join(",", getExpectedHeaders())).append("\n");
-        sb.append("Frontend Team,Team handling frontend development,john@example.com\n");
-        sb.append("Backend Team,Team handling backend services,jane@example.com\n");
-        sb.append("DevOps Team,Team managing infrastructure and deployment,\n");
-        sb.append("Mobile Team,Team developing mobile applications,mike@example.com\n");
+        sb.append("\"Frontend Team\",\"Team handling frontend development\",\"john@example.com\"\n");
+        sb.append("\"Backend Team\",\"Team handling backend services\",\"jane@example.com\"\n");
+        sb.append("\"DevOps Team\",\"Team managing infrastructure and deployment\",\"\"\n");
+        sb.append("\"Mobile Team\",\"Team developing mobile applications\",\"mike@example.com\"\n");
         return sb.toString();
     }
 }
