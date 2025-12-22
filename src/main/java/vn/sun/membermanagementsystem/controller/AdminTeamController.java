@@ -67,7 +67,7 @@ public class AdminTeamController {
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<TeamDTO> teamPage = teamService.getAllTeamsWithPagination(pageable, keyword);
+        Page<TeamDTO> teamPage = teamService.getAllTeamsWithPagination(pageable);
 
         model.addAttribute("teams", teamPage.getContent());
         model.addAttribute("currentPage", page);

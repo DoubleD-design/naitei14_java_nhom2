@@ -18,14 +18,14 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/teams")
+@RequestMapping("/api/v1/teams")
 @RequiredArgsConstructor
 public class ClientTeamController {
 
     private final TeamService teamService;
 
     /**
-     * GET /api/teams - List all teams with pagination
+     * GET /api/v1/teams - List all teams with pagination
      *
      * @param page    Page number (default: 0)
      * @param size    Page size (default: 10)
@@ -50,7 +50,7 @@ public class ClientTeamController {
                 : Sort.by(sortBy).ascending();
 
         Pageable pageable = PageRequest.of(page, size, sort);
-        Page<TeamDTO> teamPage = teamService.getAllTeamsWithPagination(pageable, keyword);
+        Page<TeamDTO> teamPage = teamService.getAllTeamsWithPagination(pageable);
 
         Map<String, Object> response = new HashMap<>();
         response.put("teams", teamPage.getContent());
@@ -63,7 +63,7 @@ public class ClientTeamController {
     }
 
     /**
-     * GET /api/teams/{id} - Get team detail
+     * GET /api/v1/teams/{id} - Get team detail
      *
      * @param id Team ID
      * @return Team detail information
@@ -82,7 +82,7 @@ public class ClientTeamController {
     }
 
     /**
-     * GET /api/teams/{id}/members - List members in a team with pagination
+     * GET /api/v1/teams/{id}/members - List members in a team with pagination
      *
      * @param id   Team ID
      * @param page Page number (default: 0)

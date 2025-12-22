@@ -224,11 +224,11 @@ public class TeamServiceImpl implements TeamService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<TeamDTO> getAllTeamsWithPagination(Pageable pageable, String keyword) {
-        log.info("Getting all teams with pagination: page {}, size {}, keyword: {}",
-                pageable.getPageNumber(), pageable.getPageSize(), keyword);
+    public Page<TeamDTO> getAllTeamsWithPagination(Pageable pageable) {
+        log.info("Getting all teams with pagination: page {}, size {}",
+                pageable.getPageNumber(), pageable.getPageSize());
 
-        Page<Team> teamPage = teamRepository.findAllByKeyword(keyword, pageable);
+        Page<Team> teamPage = teamRepository.findAllNotDeleted(pageable);
 
         return teamPage.map(team -> {
             TeamDTO dto = teamMapper.toDTO(team);
@@ -470,7 +470,7 @@ public class TeamServiceImpl implements TeamService {
         return memberPage.map(tm -> {
             User user = tm.getUser();
             String positionName = null;
-
+            
             if (user.getPositionHistories() != null && !user.getPositionHistories().isEmpty()) {
                 positionName = user.getPositionHistories().stream()
                         .filter(ph -> ph.getEndedAt() == null && ph.getPosition() != null)
@@ -478,7 +478,7 @@ public class TeamServiceImpl implements TeamService {
                         .map(ph -> ph.getPosition().getName())
                         .orElse(null);
             }
-
+            
             return TeamDetailDTO.TeamMemberDTO.builder()
                     .userId(user.getId())
                     .name(user.getName())

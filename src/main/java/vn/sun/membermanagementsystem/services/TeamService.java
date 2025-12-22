@@ -29,7 +29,7 @@ public interface TeamService {
 
     List<TeamDTO> getAllTeams();
 
-    Page<TeamDTO> getAllTeamsWithPagination(Pageable pageable, String keyword);
+    Page<TeamDTO> getAllTeamsWithPagination(Pageable pageable);
 
     TeamStatisticsDTO getTeamStatistics(Long teamId);
 

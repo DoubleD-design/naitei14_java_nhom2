@@ -39,10 +39,6 @@ public interface TeamRepository extends JpaRepository<Team, Long> {
         @Query("SELECT t FROM Team t WHERE t.deletedAt IS NULL")
         Page<Team> findAllNotDeleted(Pageable pageable);
 
-        @Query("SELECT t FROM Team t WHERE t.deletedAt IS NULL " +
-                        "AND (:keyword IS NULL OR :keyword = '' OR LOWER(t.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
-        Page<Team> findAllByKeyword(@Param("keyword") String keyword, Pageable pageable);
-
         @Query("SELECT COUNT(tm) FROM TeamMember tm WHERE tm.team.id = :teamId " +
                         "AND tm.status = 'ACTIVE' AND tm.leftAt IS NULL")
         long countActiveMembers(@Param("teamId") Long teamId);
