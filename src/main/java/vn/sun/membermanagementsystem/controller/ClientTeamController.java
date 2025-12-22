@@ -18,14 +18,14 @@ import java.util.Map;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/teams")
+@RequestMapping("/api/v1/teams")
 @RequiredArgsConstructor
 public class ClientTeamController {
 
     private final TeamService teamService;
 
     /**
-     * GET /api/teams - List all teams with pagination
+     * GET /api/v1/teams - List all teams with pagination
      *
      * @param page    Page number (default: 0)
      * @param size    Page size (default: 10)
